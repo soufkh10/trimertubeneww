@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+enum SourceType {
+  YOUTUBE_PREVIEW
+  UPLOAD
+  DIRECT_MEDIA_URL
+}
+
+enum OutputFormat {
+  MP4
+  WEBM
+  MP3
+}
+
+enum OutputQuality {
+  STANDARD
+  HIGH
+}
+
+enum MediaJobStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+  DELETED
+}
+
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  name             String?
+  image            String?
+  passwordHash     String?
+  stripeCustomerId String?        @unique
+  plan             Plan           @default(FREE)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  subscription     Subscription?
+  mediaJobs        MediaJob[]
+  usageEvents      UsageEvent[]
+}
+
+model Subscription {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  stripeSubscriptionId String   @unique
+  status               String
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model MediaJob {
+  id                String         @id @default(cuid())
+  userId            String?
+  sourceType        SourceType
+  sourceUrl         String
+  uploadedObjectKey String?
+  title             String?
+  thumbnailUrl      String?
+  startMs           Int
+  endMs             Int
+  outputFormat      OutputFormat
+  outputQuality     OutputQuality
+  status            MediaJobStatus @default(QUEUED)
+  errorMessage      String?
+  outputObjectKey   String?
+  outputSizeBytes   BigInt?
+  rightsConfirmed   Boolean
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  expiresAt         DateTime?
+  user              User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model UsageEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  ipHash    String?
+  eventType String
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
